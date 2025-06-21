@@ -1,0 +1,80 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+terraform.tfvars.json
+
+# Local override files
+*.auto.tfvars
+*.override.tf
+*.override.tf.json
+
+# PowerShell
+*.ps1xml
+*.pssc
+*.psd1
+*.psm1~    # temp backup files
+*.ps1~     # temp backup files
+*.ps1.bak
+*.ps1.txt
+
+# DSC
+*.mof
+*.checksum
+*.meta.mof
+DSCMetaConfigs/
+DSC/ # Optional: ignore compiled DSC directory if used
+
+# OS/system files
+Thumbs.db
+.DS_Store
+ehthumbs.db
+desktop.ini
+
+# Shell scripts and artifacts
+*.log
+*.bak
+*.swp
+*.tmp
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+
+# Windows/Linux artifacts
+*.lnk
+*.lock
+*.pid
+
+# Git-specific
+.git/
+!.gitignore
+
+# Secrets (just in case)
+secrets.json
+*.key
+*.pem
+*.pfx
+*.cert
+*.env
+.env*
+
+# Docs/Markdown tooling
+# *.html
+_site/
+.cache/
+
+# Packer (if used in the future)
+packer_cache/
+*.pkrvars.hcl
+
+# Python virtual envs (if you do use python tooling)
+__pycache__/
+*.py[cod]
+.venv/
