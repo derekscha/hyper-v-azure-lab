@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Microsoft_Learn__microsoft_docs_search"
+    ]
+  }
+}
