@@ -1,1 +1,3 @@
-# Project to automate creation of Hyper-V lab environment in Azure
+# hyper-v-azure-lab
+
+Infrastructure as code with automation to deploy proof of concept Hyper-V cluster in Azure.

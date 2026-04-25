@@ -78,3 +78,6 @@ packer_cache/
 __pycache__/
 *.py[cod]
 .venv/
+
+# Rando null file on my pc for some damn reason
+null
