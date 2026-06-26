@@ -1,54 +1,38 @@
-Configuration ClusterNodeConfig {
-
+# dsc-configs/ca-primary/caPrimaryConfig.ps1
+Configuration CAPrimaryConfig {
     param (
         [Parameter(Mandatory)]
-        [String]$NodeName,
-
-        [Parameter(Mandatory)]
-        [String]$DomainName
+        [PSCredential] $CAAdminCredential
     )
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration
-    Import-DscResource -ModuleName xComputerManagement
+    Import-DscResource -ModuleName ActiveDirectoryCSDsc
 
-    Node $NodeName {
+    Node $AllNodes.NodeName {
 
-        # Optional: Join the domain (if not done manually or by Azure AD DS extension)
-        xComputer JoinDomain {
-            Name       = $NodeName
-            DomainName = $DomainName
-            Credential = (Get-Credential -UserName "CORP\\JoinUser" -Message "Domain Join Credential")
+        WindowsFeature ADCS-Cert-Authority {
+            Ensure = 'Present'
+            Name   = 'ADCS-Cert-Authority'
         }
 
-        WindowsFeature HyperV {
-            Name   = "Hyper-V"
-            Ensure = "Present"
+        WindowsFeature ADCS-Web-Enrollment {
+            Ensure    = 'Present'
+            Name      = 'ADCS-Web-Enrollment'
+            DependsOn = '[WindowsFeature]ADCS-Cert-Authority'
         }
 
-        WindowsFeature FailoverCluster {
-            Name   = "Failover-Clustering"
-            Ensure = "Present"
+        ADCSCertificationAuthority RootCA {
+            Ensure                    = 'Present'
+            Credential                = $CAAdminCredential
+            CAType                    = 'StandaloneRootCA'
+            CACommonName              = 'HyperV-Lab-Root-CA'
+            CADistinguishedNameSuffix = 'DC=hyperv,DC=lab'
+            CryptoProviderName        = 'RSA#Microsoft Software Key Storage Provider'
+            HashAlgorithmName         = 'SHA256'
+            KeyLength                 = 4096
+            ValidityPeriod            = 'Years'
+            ValidityPeriodUnits       = 10
+            DependsOn                 = '[WindowsFeature]ADCS-Cert-Authority'
         }
-
-        WindowsFeature RSATClusteringMgmt {
-            Name   = "RSAT-Clustering-Mgmt"
-            Ensure = "Present"
-        }
-
-        WindowsFeature RSATClusteringPowerShell {
-            Name   = "RSAT-Clustering-PowerShell"
-            Ensure = "Present"
-        }
-
-        WindowsFeature RSATHyperVTools {
-            Name   = "RSAT-Hyper-V-Tools"
-            Ensure = "Present"
-        }
-
-        # Optional: Reboot if needed
-        xPendingReboot RebootAfterInstall {
-            Name = "RebootNodeIfNeeded"
-        }
-
     }
 }
