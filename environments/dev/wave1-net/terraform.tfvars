@@ -1,9 +1,0 @@
-subscription_id     = "YOUR-SUBSCRIPTION-ID-HERE"
-location            = "southcentralus"
-resource_group_name = "rg-hlb-dev-net-001"
-admin_cidr          = "YOUR.PUBLIC.IP.ADDRESS/32"
-vnet_address_space  = ["10.50.0.0/16"]
-subnet_mgmt_cidr    = "10.50.1.0/24"
-subnet_cluster_cidr = "10.50.2.0/24"
-subnet_vm_a_cidr    = "10.50.3.0/24"
-subnet_vm_b_cidr    = "10.50.4.0/24"

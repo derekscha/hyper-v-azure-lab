@@ -63,7 +63,7 @@
 
 .PARAMETER AllowedIpAddress
     Your public IPv4 address. Restricts Storage Account and Key Vault firewall rules.
-    Default: 99.6.19.126
+    Required — no default is provided to prevent accidental use of a stale value.
 
 .PARAMETER EnablePurgeProtection
     When $true, Key Vault purge protection is enabled — a deleted vault cannot be purged
@@ -131,8 +131,9 @@ param (
     # Security / operational parameters
     # -------------------------------------------------------------------------
 
+    [Parameter(Mandatory)]
     [ValidatePattern('^\d{1,3}(\.\d{1,3}){3}$')]
-    [string]$AllowedIpAddress = '99.6.19.126',
+    [string]$AllowedIpAddress,
 
     [bool]$EnablePurgeProtection = $false,
 

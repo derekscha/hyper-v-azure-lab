@@ -8,7 +8,7 @@ Configuration CAPrimaryConfig {
     Import-DscResource -ModuleName PSDesiredStateConfiguration
     Import-DscResource -ModuleName ActiveDirectoryCSDsc
 
-    Node $AllNodes.NodeName {
+    Node "localhost" {
 
         WindowsFeature ADCS-Cert-Authority {
             Ensure = 'Present'
