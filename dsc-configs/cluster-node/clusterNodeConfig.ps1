@@ -5,7 +5,10 @@ Configuration ClusterNodeConfig {
         [String]$NodeName,
 
         [Parameter(Mandatory)]
-        [String]$DomainName
+        [String]$DomainName,
+
+        [Parameter(Mandatory)]
+        [PSCredential]$DomainJoinCredential
     )
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration
@@ -17,7 +20,7 @@ Configuration ClusterNodeConfig {
         xComputer JoinDomain {
             Name       = $NodeName
             DomainName = $DomainName
-            Credential = (Get-Credential -UserName "CORP\\JoinUser" -Message "Domain Join Credential")
+            Credential = $DomainJoinCredential
         }
 
         WindowsFeature HyperV {

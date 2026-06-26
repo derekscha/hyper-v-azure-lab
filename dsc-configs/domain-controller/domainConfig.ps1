@@ -5,7 +5,10 @@ Configuration DomainConfig {
         [String]$DomainName,
 
         [Parameter(Mandatory)]
-        [String]$SafeModeAdministratorPassword
+        [PSCredential]$DomainAdminCredential,
+
+        [Parameter(Mandatory)]
+        [PSCredential]$SafeModeAdminCredential
     )
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration
@@ -25,11 +28,8 @@ Configuration DomainConfig {
 
         xADDomain FirstDC {
             DomainName                    = $DomainName
-            DomainAdministratorCredential = (Get-Credential -UserName "Administrator" -Message "Domain Admin")
-            SafemodeAdministratorPassword = (New-Object System.Management.Automation.PSCredential (
-                                                    "unused",
-                                                    (ConvertTo-SecureString $SafeModeAdministratorPassword -AsPlainText -Force)
-                                                ))
+            DomainAdministratorCredential = $DomainAdminCredential
+            SafemodeAdministratorPassword = $SafeModeAdminCredential
             DependsOn = '[WindowsFeature]ADDSInstall'
             DomainNetbiosName             = $DomainName.Split('.')[0].ToUpper()
         }
