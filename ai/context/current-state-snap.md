@@ -1,6 +1,6 @@
 # Current State Snapshot
-**Captured:** 2026-04-24  
-**Session summary:** Initial repo review + architecture planning discussion
+**Captured:** 2026-06-25  
+**Session summary:** Bootstrap script (Wave 0) debugged and tentatively complete; Wave 1 next
 
 ---
 
@@ -12,10 +12,11 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 
 ## Repo State as of This Session
 
-### Overall completion: ~10-15%
+### Overall completion: ~15-20%
 
 **What exists and is functional (or near-functional):**
 - Full directory/folder hierarchy
+- `scripts/bootstrap.ps1` — **Wave 0 tentatively complete.** Creates resource group, storage account (TF state backend), blob container, Key Vault, assigns RBAC roles, sets firewall rules, and writes placeholder secrets. Two parameter compatibility bugs fixed this session (`-DefaultToOAuthAuthentication` and `-EnableRbacAuthorization` removed; both were dropped/replaced in newer Az module versions).
 - `dsc-configs/domain-controller/domainConfig.ps1` — installs AD DS, creates first DC. Has `Get-Credential` call that must be refactored for automation.
 - `dsc-configs/cluster-node/clusterNodeConfig.ps1` — joins domain, installs Hyper-V + Failover Clustering features. Has same `Get-Credential` issue.
 - `dsc-configs/dsc-pull-server/setupDscPullServer.ps1` — configures DSC Pull Server on IIS port 8080. Appears complete.
@@ -68,14 +69,14 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 
 ## Deployment Wave Sequence Agreed Upon
 
-| Wave | Scope | Notes |
-|------|-------|-------|
-| 0 | Bootstrap: Storage Account (TF state) + Key Vault | Azure CLI/PS script, NOT Terraform-managed (chicken-and-egg) |
-| 1 | Networking: vNet, subnets, NSGs, NICs | Foundation for all other waves |
-| 2 | DSC Pull Server VM + MOF upload | Must be up before VMs pull configs |
-| 3 | Domain Controller(s) | Pulls DSC config; establishes AD DS + DNS |
-| 4 | CA Primary + CA Secondary | Needs domain; cluster nodes need certs |
-| 5 | Hyper-V Cluster Nodes | Needs domain + CA + DSC all healthy |
+| Wave | Scope | Status | Notes |
+| ---- | ----- | ------ | ----- |
+| 0 | Bootstrap: Storage Account (TF state) + Key Vault | **Tentatively complete** | Azure CLI/PS script, NOT Terraform-managed (chicken-and-egg) |
+| 1 | Networking: vNet, subnets, NSGs, NICs | **Next** — validate TF init (remote state + KV secrets) | Foundation for all other waves |
+| 2 | DSC Pull Server VM + MOF upload | Not started | Must be up before VMs pull configs |
+| 3 | Domain Controller(s) | Not started | Pulls DSC config; establishes AD DS + DNS |
+| 4 | CA Primary + CA Secondary | Not started | Needs domain; cluster nodes need certs |
+| 5 | Hyper-V Cluster Nodes | Not started | Needs domain + CA + DSC all healthy |
 
 Separate Terraform workspaces per wave. Cross-wave output sharing via remote state data sources.
 
