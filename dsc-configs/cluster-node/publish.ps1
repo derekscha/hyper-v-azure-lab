@@ -22,10 +22,10 @@ param (
 New-Item -ItemType Directory -Force -Path $OutputPath | Out-Null
 
 # Import config script
-. "$PSScriptRoot\DomainConfig.ps1"
+. "$PSScriptRoot\clusterNodeConfig.ps1"
 
 Write-Host "Compiling DSC configuration..." -ForegroundColor Cyan
-DomainConfig -OutputPath $OutputPath
+clusterNodeConfig -OutputPath $OutputPath
 
 Write-Host "Creating checksum files..." -ForegroundColor Cyan
 New-DscChecksum -Path $OutputPath -Force
