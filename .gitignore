@@ -1,9 +1,10 @@
 # Terraform
+# Note: .terraform.lock.hcl not explicitly ignored, as it is recommended to commit this file to version control
 .terraform/
 *.tfstate
 *.tfstate.*
 crash.log
-*.tfvars
+terraform.tfvars
 terraform.tfvars.json
 
 # Local override files
@@ -11,10 +12,17 @@ terraform.tfvars.json
 *.override.tf
 *.override.tf.json
 
+# Terraform crash logs (verbose)
+crash.log
+crash.*.log
+
+# Terraform plan artifacts
+*.tfplan
+tfplan
+
 # PowerShell
 *.ps1xml
 *.pssc
-*.psd1
 *.psm1~    # temp backup files
 *.ps1~     # temp backup files
 *.ps1.bak
@@ -25,7 +33,8 @@ terraform.tfvars.json
 *.checksum
 *.meta.mof
 DSCMetaConfigs/
-DSC/ # Optional: ignore compiled DSC directory if used
+# Optional: ignore compiled DSC directory if used
+DSC/
 
 # OS/system files
 Thumbs.db
@@ -49,7 +58,7 @@ desktop.ini
 
 # Windows/Linux artifacts
 *.lnk
-*.lock
+# *.lock ## Removed for now as it's a bit aggressive.
 *.pid
 
 # Git-specific
@@ -81,3 +90,7 @@ __pycache__/
 
 # Rando null file on my pc for some damn reason
 null
+
+# Claude/AI Working Files
+.claude/worktrees/
+.claude/settings.local.json

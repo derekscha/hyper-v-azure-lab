@@ -34,7 +34,18 @@ variable "subnet_vm_b_cidr" {
   description = "VM traffic subnet B (cluster node NIC 3)"
 }
 
+variable "subnet_bastion_cidr" {
+  type        = string
+  description = "CIDR for AzureBastionSubnet (Azure requires exactly this name, minimum /26)"
+}
+
+variable "deploy_bastion" {
+  type        = bool
+  description = "Deploy Bastion host and public IP. Set false to destroy and stop billing; subnet and NSG remain."
+  default     = false
+}
+
 variable "admin_cidr" {
   type        = string
-  description = "CIDR allowed inbound for RDP (3389) and WinRM (5985-5986) on snet-mgmt"
+  description = "CIDR allowed HTTPS (443) inbound to Azure Bastion — no direct VM access"
 }

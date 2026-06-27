@@ -10,9 +10,10 @@ terraform {
 
   backend "azurerm" {
     resource_group_name  = "rg-hlb-dev-001"
-    storage_account_name = "<STORAGE_ACCOUNT_NAME>"
+    storage_account_name = "sthlbdev001"
     container_name       = "terraform-state"
     key                  = "dev/wave1-net/terraform.tfstate"
+    use_azuread_auth     = true
   }
 }
 

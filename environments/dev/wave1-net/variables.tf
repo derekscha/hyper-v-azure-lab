@@ -28,7 +28,19 @@ variable "tags" {
 
 variable "admin_cidr" {
   type        = string
-  description = "Your public IP CIDR allowed for RDP/WinRM (e.g., 1.2.3.4/32)"
+  description = "Your public IP CIDR allowed for HTTPS (443) access to Azure Bastion (e.g., 1.2.3.4/32)"
+}
+
+variable "subnet_bastion_cidr" {
+  type        = string
+  description = "CIDR for AzureBastionSubnet (minimum /26)"
+  default     = "10.50.0.0/26"
+}
+
+variable "deploy_bastion" {
+  type        = bool
+  description = "Deploy Bastion host and public IP. Set false to destroy and stop billing."
+  default     = false
 }
 
 variable "vnet_address_space" {
