@@ -69,3 +69,9 @@ variable "subnet_vm_b_cidr" {
   description = "VM traffic subnet B (cluster node NIC 3 / VLAN set B)"
   default     = "10.50.4.0/24"
 }
+
+variable "vnet_dns_servers" {
+  type        = list(string)
+  default     = []
+  description = "Custom DNS servers for the VNet. Set to DC's static IP after Wave 3."
+}

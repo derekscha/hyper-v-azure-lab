@@ -49,3 +49,9 @@ variable "admin_cidr" {
   type        = string
   description = "CIDR allowed HTTPS (443) inbound to Azure Bastion — no direct VM access"
 }
+
+variable "dns_servers" {
+  type        = list(string)
+  default     = []
+  description = "Custom DNS servers for the VNet. Empty list uses Azure-provided DNS."
+}

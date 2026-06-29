@@ -12,6 +12,7 @@ module "network" {
   tags                = var.tags
 
   address_space       = var.vnet_address_space
+  dns_servers         = var.vnet_dns_servers
   deploy_bastion      = var.deploy_bastion
   subnet_bastion_cidr = var.subnet_bastion_cidr
   subnet_mgmt_cidr    = var.subnet_mgmt_cidr

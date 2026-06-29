@@ -53,3 +53,11 @@ output "resource_group_name" {
 output "location" {
   value = var.location
 }
+
+output "nat_gateway_id" {
+  value = module.network.nat_gateway_id
+}
+
+output "nat_public_ip" {
+  value = module.network.nat_public_ip
+}

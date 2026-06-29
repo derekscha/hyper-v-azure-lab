@@ -12,26 +12,27 @@ Configuration DomainConfig {
     )
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration
-    Import-DscResource -ModuleName xActiveDirectory
+    Import-DscResource -ModuleName ActiveDirectoryDsc
 
-    Node "localhost" {
+    Node 'localhost' {
 
-        WindowsFeature 'ADDSInstall' {
+        WindowsFeature ADDSInstall {
             Name   = 'AD-Domain-Services'
             Ensure = 'Present'
         }
 
-        WindowsFeature 'RSATTools' {
-            Name   = 'RSAT-AD-Tools'
-            Ensure = 'Present'
+        WindowsFeature RSATTools {
+            Name      = 'RSAT-AD-Tools'
+            Ensure    = 'Present'
+            DependsOn = '[WindowsFeature]ADDSInstall'
         }
 
-        xADDomain FirstDC {
+        ADDomain FirstDC {
             DomainName                    = $DomainName
-            DomainAdministratorCredential = $DomainAdminCredential
+            DomainNetBIOSName             = $DomainName.Split('.')[0].ToUpper()
+            Credential                    = $DomainAdminCredential
             SafemodeAdministratorPassword = $SafeModeAdminCredential
-            DependsOn = '[WindowsFeature]ADDSInstall'
-            DomainNetbiosName             = $DomainName.Split('.')[0].ToUpper()
+            DependsOn                     = '[WindowsFeature]ADDSInstall'
         }
     }
 }

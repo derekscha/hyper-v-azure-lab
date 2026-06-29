@@ -3,6 +3,7 @@ resource "azurerm_virtual_network" "lab" {
   location            = var.location
   resource_group_name = var.resource_group_name
   address_space       = var.address_space
+  dns_servers         = var.dns_servers
   tags                = var.tags
 }
 
@@ -283,4 +284,44 @@ resource "azurerm_bastion_host" "lab" {
     subnet_id            = azurerm_subnet.bastion.id
     public_ip_address_id = azurerm_public_ip.bastion[0].id
   }
+}
+
+resource "azurerm_public_ip" "nat" {
+  name                = "pip-nat"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  tags                = var.tags
+}
+
+resource "azurerm_nat_gateway" "lab" {
+  name                    = "ngw-hyperv-lab"
+  location                = var.location
+  resource_group_name     = var.resource_group_name
+  sku_name                = "Standard"
+  idle_timeout_in_minutes = 4
+  tags                    = var.tags
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "lab" {
+  nat_gateway_id       = azurerm_nat_gateway.lab.id
+  public_ip_address_id = azurerm_public_ip.nat.id
+}
+
+# Associate NAT GW to all VM-hosting subnets. AzureBastionSubnet is excluded —
+# NAT GW + Bastion subnet is unsupported by Azure.
+resource "azurerm_subnet_nat_gateway_association" "mgmt" {
+  subnet_id      = azurerm_subnet.mgmt.id
+  nat_gateway_id = azurerm_nat_gateway.lab.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "vm_a" {
+  subnet_id      = azurerm_subnet.vm_a.id
+  nat_gateway_id = azurerm_nat_gateway.lab.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "vm_b" {
+  subnet_id      = azurerm_subnet.vm_b.id
+  nat_gateway_id = azurerm_nat_gateway.lab.id
 }
