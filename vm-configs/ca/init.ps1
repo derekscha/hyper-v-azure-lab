@@ -14,9 +14,6 @@ function Write-Log { param($msg) "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $msg
 
 Write-Log 'CA init.ps1 starting.'
 
-Write-Log 'Installing NuGet package provider.'
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers | Out-Null
-
 Write-Log 'Installing RSAT-AD-Tools.'
 Install-WindowsFeature -Name RSAT-AD-Tools -IncludeManagementTools | Out-Null
 

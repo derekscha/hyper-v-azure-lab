@@ -151,7 +151,8 @@ $ErrorActionPreference = 'Stop'
 [string]$resourceGroupPrefix  = "rg-$WorkloadCode-$EnvironmentCode"
 [string]$storageAccountPrefix = "st$($WorkloadCode)$($EnvironmentCode)"
 [string]$keyVaultPrefix       = "kv-$WorkloadCode-$EnvironmentCode"
-[string]$storageContainerName = 'terraform-state'
+[string]$storageContainerName  = 'terraform-state'
+[string]$scriptsContainerName  = 'scripts'
 
 # ---------------------------------------------------------------------------
 # Early Storage Account name length validation — no Azure connection required.
@@ -332,7 +333,7 @@ try {
     Write-Host '  Name prefixes (instance suffix resolved after login):'      -ForegroundColor White
     Write-Host "  Resource Group  : $resourceGroupPrefix-<NNN>"               -ForegroundColor White
     Write-Host "  Storage Account : $storageAccountPrefix<NNN>"               -ForegroundColor White
-    Write-Host "  Container       : $storageContainerName"                    -ForegroundColor White
+    Write-Host "  Containers      : $storageContainerName, $scriptsContainerName" -ForegroundColor White
     Write-Host "  Key Vault       : $keyVaultPrefix-<NNN>"                    -ForegroundColor White
     Write-Host ''
     Write-Host '  Tags:'                                                       -ForegroundColor White
@@ -388,7 +389,7 @@ try {
     Write-Host '  Resolved resource names:'                                   -ForegroundColor White
     Write-Host "    Resource Group  : $resourceGroupName"                     -ForegroundColor White
     Write-Host "    Storage Account : $storageAccountName"                    -ForegroundColor White
-    Write-Host "    Container       : $storageContainerName"                  -ForegroundColor White
+    Write-Host "    Containers      : $storageContainerName, $scriptsContainerName" -ForegroundColor White
     Write-Host "    Key Vault       : $keyVaultName"                          -ForegroundColor White
     Write-Host ''
 
@@ -566,26 +567,28 @@ try {
     # Shared key access is disabled; an OAuth context (current user token) is
     # used — requires the Storage Blob Data Contributor role above to be active.
     # -----------------------------------------------------------------------
-    Write-Step "Storage Container: $storageContainerName"
+    Write-Step "Storage Containers: $storageContainerName, $scriptsContainerName"
     try {
         $storageContext = New-AzStorageContext `
             -StorageAccountName $storageAccountName `
             -UseConnectedAccount
 
-        if ($null -ne (Get-AzStorageContainer -Name $storageContainerName -Context $storageContext -ErrorAction SilentlyContinue)) {
-            Write-Skip "Already exists — skipping."
-        }
-        else {
-            New-AzStorageContainer `
-                -Name        $storageContainerName `
-                -Context     $storageContext `
-                -Permission  'Off' `
-                -ErrorAction Stop | Out-Null
-            Write-Done "Created."
+        foreach ($containerName in @($storageContainerName, $scriptsContainerName)) {
+            if ($null -ne (Get-AzStorageContainer -Name $containerName -Context $storageContext -ErrorAction SilentlyContinue)) {
+                Write-Skip "$containerName — already exists, skipping."
+            }
+            else {
+                New-AzStorageContainer `
+                    -Name        $containerName `
+                    -Context     $storageContext `
+                    -Permission  'Off' `
+                    -ErrorAction Stop | Out-Null
+                Write-Done "$containerName — created."
+            }
         }
     }
     catch {
-        throw "Failed to create Storage Container '$storageContainerName': $($_.Exception.Message)"
+        throw "Failed to create Storage Container: $($_.Exception.Message)"
     }
 
     # -----------------------------------------------------------------------
@@ -785,7 +788,7 @@ try {
     Write-Host '  Resources created/verified:'                                -ForegroundColor White
     Write-Host "    Resource Group  : $resourceGroupName"                     -ForegroundColor White
     Write-Host "    Storage Account : $storageAccountName"                    -ForegroundColor White
-    Write-Host "    Container       : $storageContainerName"                  -ForegroundColor White
+    Write-Host "    Containers      : $storageContainerName, $scriptsContainerName" -ForegroundColor White
     Write-Host "    Key Vault       : $keyVaultName"                          -ForegroundColor White
     Write-Host "    Log             : $logFilePath"                           -ForegroundColor White
     Write-Host ''

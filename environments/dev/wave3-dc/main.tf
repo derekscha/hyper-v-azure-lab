@@ -58,7 +58,7 @@ module "dc" {
   resource_group_name = azurerm_resource_group.lab.name
   tags                = var.tags
 
-  vm_size            = "Standard_D4s_v5"
+  vm_size            = "Standard_D4s_v4"
   subnet_id          = data.terraform_remote_state.wave1_net.outputs.subnet_mgmt_id
   private_ip_address = var.dc_private_ip
 
@@ -76,7 +76,7 @@ module "ca" {
   resource_group_name = azurerm_resource_group.lab.name
   tags                = var.tags
 
-  vm_size   = "Standard_D4s_v5"
+  vm_size   = "Standard_D4s_v4"
   subnet_id = data.terraform_remote_state.wave1_net.outputs.subnet_mgmt_id
 
   admin_username = var.vm_admin_username
