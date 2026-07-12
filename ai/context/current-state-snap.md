@@ -1,7 +1,7 @@
 # Current State Snapshot
 
-**Captured:** 2026-06-29
-**Session summary:** Wave 4 Terraform complete and plan verified. Blocked on regional vCPU quota increase. Waves 2 & 3 redeployed with DSv4 SKUs. Wave 1 re-applied with dual DNS. Storage auth redesigned to managed identity.
+**Captured:** 2026-07-10
+**Session summary:** Cut over from Windows to Linux dev machine. Recreated missing `terraform.tfvars` for all four waves. Intentionally destroyed Waves 1–4 (to stop billing and validate a from-scratch deploy on the new machine). Redeployed Waves 1–3 successfully. Wave 4 partially deployed — VMs and disks created, but the `scripts` blob container/blob collided with a pre-existing Wave 0 artifact, so both CSE extensions never ran and the cluster nodes are unconfigured. All VMs deallocated at end of session to stop billing.
 
 ---
 
@@ -13,22 +13,22 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 
 ## Repo State as of This Session
 
-### Overall completion: ~75%
+### Overall completion: ~80%
 
 **What exists and is functional:**
 
-- `scripts/bootstrap.ps1` — Wave 0 complete. Now creates TWO containers: `terraform-state` and `scripts`. Scripts container needed for wave 4 CSE blob download. Idempotent — safe to re-run.
-- `environments/dev/wave1-net/` — Wave 1 Terraform root. Deployed. DNS updated: `["10.50.1.10", "168.63.129.16"]` — DC first, Azure resolver fallback for provisioning-time internet access.
-- `modules/network/` — network module: vNet, 5 subnets, 5 NSGs, NAT gateway, Azure Bastion toggle.
+- `scripts/bootstrap.ps1` — Wave 0 complete, idempotent. Creates RG, Storage Account (key-based auth disabled), `terraform-state` + `scripts` containers, Key Vault, placeholder secrets.
+- `environments/dev/wave1-net/` — Wave 1 Terraform root. **Redeployed clean** on Linux: 23 resources added, 0 destroyed. DNS: `["10.50.1.10", "168.63.129.16"]`.
+- `modules/network/` — network module: vNet, 5 subnets, 5 NSGs, NAT gateway, Azure Bastion toggle (off by default).
 - `modules/compute/` — generic Windows VM module: NIC (static or dynamic IP), VM, CSE extension.
-- `environments/dev/wave2-dsc/` — Wave 2 Terraform root. **Redeployed** on Standard_D2s_v4.
-- `vm-configs/dsc-pull-server/init.ps1` — Two-phase init: installs xPSDesiredStateConfiguration, runs DSC configuration in child process. **Deployed and verified.**
-- `environments/dev/wave3-dc/` — Wave 3 Terraform root. SKUs changed to D4s_v4. Redeploy pending or complete.
-- `vm-configs/domain-controller/init.ps1` — Two-phase DC promotion (CSE + scheduled task). Uses `Install-PackageProvider -Name NuGet` + `Install-Module ActiveDirectoryDsc`. **Deployed and verified.**
-- `vm-configs/ca/init.ps1` — Enterprise Root CA init. NuGet bootstrap line removed (CA never needed it — no PSGallery modules installed). **Deployed and verified.**
-- `vm-configs/cluster-node/init.ps1` — **Written.** Two-phase: domain join + scheduled task (Phase 1 via CSE), feature install + LCM pull config (Phase 2 via startup task). Validation log written to `C:\configure-node-validation.log`.
-- `environments/dev/wave4-cluster/` — **Terraform complete. Plan verified. Apply blocked on vCPU quota.**
-- `dsc-configs/cluster-node/clusterNodeConfig.ps1` — Updated. No params, no external modules, `Node 'localhost'`, five WindowsFeature blocks only.
+- `environments/dev/wave2-dsc/` — Wave 2 Terraform root. **Redeployed clean**: 4 resources added. CSE completed in 8m48s.
+- `vm-configs/dsc-pull-server/init.ps1` — **Deployed and verified.** OData endpoint (`https://localhost:8080/PSDSCPullServer.svc`) confirmed healthy via `az vm run-command` (HTTP 200).
+- `environments/dev/wave3-dc/` — Wave 3 Terraform root. **Redeployed clean**: 7 resources added. DC CSE completed in 5m58s, CA CSE in 9m10s.
+- `vm-configs/domain-controller/init.ps1` — **Deployed and verified.** `Get-ADDomain` confirms NetBIOS `CORP`, domain mode `Windows2025Domain`, ADWS/DNS/NTDS all `Running`.
+- `vm-configs/ca/init.ps1` — **Deployed and verified.** Domain-joined to `corp.lab`, `CertSvc` running.
+- `vm-configs/cluster-node/init.ps1` — Written, not yet executed this session (CSE never ran — see blocker below).
+- `environments/dev/wave4-cluster/` — Terraform plan clean (26 to add). **Apply partially failed**: 21/26 resources created (RG, both VMs, all 8 NICs, 3 shared disks, 6 disk attachments, managed identity). Failed on `azurerm_storage_container.scripts` — "already exists" — which blocked the role assignment and both CSE extensions.
+- `dsc-configs/cluster-node/clusterNodeConfig.ps1` — Unchanged, ready to publish once nodes are configured.
 - All `dsc-configs/*/publish.ps1` files — compile and publish MOF to pull server.
 
 **What is stale/superseded:**
@@ -44,52 +44,62 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 
 ---
 
-## Deployed Infrastructure (dev)
+## Active Blocker: Wave 4 `scripts` container/blob ownership conflict
 
-| Resource | Name | State |
-| -------- | ---- | ----- |
-| Resource Group (Wave 0) | `rg-hlb-dev-001` | Deployed |
-| Storage Account (TF state) | `sthlbdev001` | Deployed — key-based auth **disabled**, AAD only |
-| Blob Container | `terraform-state` | Deployed |
-| Blob Container | `scripts` | Deployed — created and permitted manually |
-| Key Vault | `kv-hlb-dev-001` | Deployed |
-| Resource Group (Wave 1) | `rg-hlb-dev-net-001` | Deployed |
-| VNet | `vnet-hyperv-lab` (10.50.0.0/16) | Deployed — DNS: `["10.50.1.10", "168.63.129.16"]` |
-| Subnet — Bastion | `AzureBastionSubnet` (10.50.0.0/26) | Deployed |
-| Subnet — Mgmt | `snet-mgmt` (10.50.1.0/24) | Deployed |
-| Subnet — Cluster | `snet-cluster` (10.50.2.0/24) | Deployed |
-| Subnet — VM-A | `snet-vm-a` (10.50.3.0/24) | Deployed |
-| Subnet — VM-B | `snet-vm-b` (10.50.4.0/24) | Deployed |
-| NSG — Bastion | `nsg-bastion` | Deployed |
-| NSG — Mgmt | `nsg-mgmt` | Deployed |
-| NSG — Cluster | `nsg-cluster` | Deployed |
-| NSG — VM-A | `nsg-vm-a` | Deployed |
-| NSG — VM-B | `nsg-vm-b` | Deployed |
-| NAT Gateway + PIP | `ngw-hyperv-lab` / `pip-nat` | Deployed |
-| Azure Bastion + PIP | `bas-hyperv-lab` / `pip-bastion` | Toggle — on when needed |
-| Resource Group (Wave 2) | `rg-hlb-dev-dsc-001` | Deployed |
-| DSC Pull Server VM | `vm-dsc-dev-001` (**Standard_D2s_v4**, 10.50.1.x) | **Confirmed healthy** |
-| DSC Pull Server endpoint | `https://<ip>:8080/PSDSCPullServer.svc` | **Confirmed healthy** |
-| Resource Group (Wave 3) | `rg-hlb-dev-dc-001` | Deployed |
-| Domain Controller VM | `vm-dc-dev-001` (**Standard_D4s_v4**, 10.50.1.10 static) | **Confirmed healthy** — `corp.lab` |
-| Certificate Authority VM | `vm-ca-dev-001` (**Standard_D4s_v4**, dynamic IP) | **Confirmed healthy** — domain-joined, AD CS running |
-| Resource Group (Wave 4) | `rg-hlb-cluster-dev-001` | **Not yet deployed — quota blocked** |
-| Cluster Node 1 | `vm-cn-dev-001` (Standard_D8s_v5, 10.50.1.20 mgmt) | Pending quota |
-| Cluster Node 2 | `vm-cn-dev-002` (Standard_D8s_v5, 10.50.1.21 mgmt) | Pending quota |
-| Shared Disk — Quorum | `disk-hlb-cluster-quorum` (32 GB, Premium LRS, maxShares=2) | Pending |
-| Shared Disk — CSV A | `disk-hlb-cluster-csv-a` (512 GB, Premium LRS, maxShares=2) | Pending |
-| Shared Disk — CSV B | `disk-hlb-cluster-csv-b` (512 GB, Premium LRS, maxShares=2) | Pending |
+**Root cause:** `environments/dev/wave4-cluster/main.tf` declares `resource "azurerm_storage_container" "scripts"` and `resource "azurerm_storage_blob" "cluster_init"`, trying to manage both with Terraform. But the `scripts` container lives in Wave 0's storage account (`sthlbdev001`), which is never destroyed — so on every from-scratch Wave 4 redeploy, Terraform tries to create a container that already exists and errors: `A resource with the ID "https://sthlbdev001.blob.core.windows.net/scripts" already exists`.
 
-**NAT Gateway subnet associations:** snet-mgmt, snet-vm-a, snet-vm-b (snet-cluster excluded — internal only).
+**Blast radius:** Because that resource fails, its dependents never run: `azurerm_role_assignment.cluster_scripts_reader` (grants the cluster's managed identity read access to the container) and **both `azurerm_virtual_machine_extension` CSE resources** (cn1, cn2). Confirmed via `az vm extension list` — neither node has any extension. The cluster VMs exist, are domain-network-reachable, and have all 4 NICs + 3 shared disks attached, but are **not** domain-joined, have no Hyper-V/Failover Clustering features, and never pulled their DSC config.
 
-**Access model:** No public IPs on any VM. RDP only via Azure Bastion.
+**Agreed fix (not yet implemented — see `ai/plans/2026-07-10-wave4-bootstrap-ownership-fix.md`):** Move container creation *and* the `cluster-node-init.ps1` blob upload into `scripts/bootstrap.ps1` (Wave 0), which already creates the `scripts` container idempotently. Wave 4 switches both resources to `data` sources (`data.azurerm_storage_container`, `data.azurerm_storage_blob` — both confirmed present in the installed `hashicorp/azurerm` provider schema), so Terraform only reads them, never owns their lifecycle.
 
 ---
 
-## Blocking Issues (as of 2026-06-29)
+## Deployed Infrastructure (dev) — as of session end
 
-1. **Regional vCPU quota** — Total Regional vCPUs exhausted. Wave 4 needs 16 more cores (2× D8s_v5). Quota increase request submitted. No code changes needed — `terraform apply` will succeed once quota is granted.
-2. ~~**`scripts` blob container**~~ — ✓ Created and permitted manually. No action needed.
+| Resource | Name | State |
+| -------- | ---- | ----- |
+| Resource Group (Wave 0) | `rg-hlb-dev-001` | Deployed (never destroyed) |
+| Storage Account (TF state) | `sthlbdev001` | Deployed — key-based auth disabled, AAD only |
+| Blob Container | `terraform-state` | Deployed |
+| Blob Container | `scripts` | Deployed (persisted through all wave teardowns) |
+| Key Vault | `kv-hlb-dev-001` | Deployed |
+| Resource Group (Wave 1) | `rg-hlb-dev-net-001` | Redeployed this session |
+| VNet | `vnet-hyperv-lab` (10.50.0.0/16) | Redeployed — DNS: `["10.50.1.10", "168.63.129.16"]` |
+| Subnets / NSGs / NAT GW | (5 each / 1) | Redeployed — NAT public IP `20.225.49.2` |
+| Resource Group (Wave 2) | `rg-hlb-dev-dsc-001` | Redeployed |
+| DSC Pull Server VM | `vm-dsc-dev-001` (Standard_D2s_v4, 10.50.1.4) | Redeployed, healthy, **deallocated** |
+| Resource Group (Wave 3) | `rg-hlb-dev-dc-001` | Redeployed |
+| Domain Controller VM | `vm-dc-dev-001` (Standard_D4s_v4, 10.50.1.10 static) | Redeployed, healthy (`corp.lab`), **deallocated** |
+| Certificate Authority VM | `vm-ca-dev-001` (Standard_D4s_v4, 10.50.1.5) | Redeployed, healthy, domain-joined, **deallocated** |
+| Resource Group (Wave 4) | `rg-hlb-dev-cluster-001` | Partially deployed |
+| Cluster Node 1 | `vm-cn-dev-001` (Standard_D8s_v5, 10.50.1.20 mgmt) | VM up, **not configured** (CSE never ran), **deallocated** |
+| Cluster Node 2 | `vm-cn-dev-002` (Standard_D8s_v5, 10.50.1.21 mgmt) | VM up, **not configured** (CSE never ran), **deallocated** |
+| Shared Disk — Quorum | `disk-hlb-cluster-quorum` (32 GB, Premium LRS, maxShares=2) | Attached to both nodes |
+| Shared Disk — CSV A | `disk-hlb-cluster-csv-a` (512 GB, Premium LRS, maxShares=2) | Attached to both nodes |
+| Shared Disk — CSV B | `disk-hlb-cluster-csv-b` (512 GB, Premium LRS, maxShares=2) | Attached to both nodes |
+| Managed Identity | `id-hlb-cluster-scripts` | Created, but **no role assignment** (blocked by the container error) |
+
+**All 5 VMs deallocated at end of session** — compute billing stopped, disks/NICs/public IPs (none in use) remain.
+
+**NAT Gateway subnet associations:** snet-mgmt, snet-vm-a, snet-vm-b (snet-cluster excluded — internal only).
+
+**Access model:** No public IPs on any VM. RDP only via Azure Bastion (currently toggled off).
+
+---
+
+## Regional vCPU Quota (validated this session)
+
+southcentralus, subscription `e61ca020-85e9-4d96-8947-b331a6b295fd`:
+
+| Family | Used | Limit |
+| ------ | ---- | ----- |
+| Standard DSv4 (wave2 D2s_v4 + wave3 2x D4s_v4) | 10 | 20 |
+| Standard DSv5 (wave4 2x D8s_v5) | 16 | 20 |
+| Total Regional vCPUs | 26 | 60 |
+
+No quota increase needed — the original 2026-06-29 blocker (quota exhausted) is resolved; today's Wave 4 issue is purely the storage container ownership bug above, unrelated to quota.
+
+One unrelated note: `Standard_D8s_v5` has a subscription-level `NotAvailableForSubscription` restriction on **availability zone 2** in `southcentralus`. Not currently an issue since `wave4-cluster/main.tf` doesn't pin VMs to a zone — flag if zone pinning is ever added.
 
 ---
 
@@ -97,25 +107,23 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 
 | Area | Change |
 |------|--------|
-| Wave 1 DNS | Added `168.63.129.16` as VNet fallback DNS — fixes PSGallery/internet access during CSE execution before DC is provisioned |
-| Wave 2 SKU | `Standard_D2s_v5` → `Standard_D2s_v4` (different quota pool) |
-| Wave 3 SKUs | DC + CA: `Standard_D4s_v5` → `Standard_D4s_v4` |
-| NuGet bootstrap | Root cause was missing DNS fallback, not PSGallery feed change. Reverted to original `Install-PackageProvider -Name NuGet` after DNS fix confirmed working. CA init.ps1 had dead NuGet call removed (CA installs no PSGallery modules). |
-| Storage auth | `sthlbdev001` disallows key-based auth. Wave 4 switched to: `storage_use_azuread = true` in provider + user-assigned managed identity (`id-hlb-cluster-scripts`) on cluster VMs + `Storage Blob Data Reader` role on scripts container + CSE `protected_settings` uses `managedIdentity.clientId` instead of `storageAccountKey` |
-| bootstrap.ps1 | Now creates both `terraform-state` and `scripts` containers |
-| Wave 4 Terraform | Complete. Plan verified clean. |
+| `wave1-net/terraform.tfvars` | Recreated from scratch (missing on new Linux machine — `.gitignore`d, never committed). Added `vnet_dns_servers = ["10.50.1.10", "168.63.129.16"]`. |
+| `wave2-dsc/terraform.tfvars`, `wave3-dc/terraform.tfvars`, `wave4-cluster/terraform.tfvars` | Recreated from scratch. Cross-checked against this snapshot for `key_vault_name` and `cluster_node_config_id` (both confirmed correct). |
+| Full teardown → redeploy | Confirmed intentional (cost control + fresh-install validation on the new Linux machine). |
+| Wave 4 deploy | Failed partway — see Active Blocker above. |
+| VM power state | All 5 VMs deallocated at session end. |
 
 ---
 
 ## Wave 4 Design (for reference)
 
-**Cluster node config GUID:** `ee96e6d2-28b4-4ef3-b8ec-551ce58a1a18`
+**Cluster node config GUID:** `ee96e6d2-28b4-4ef3-b8ec-551ce58a1a18` (fixed value, must match `-ConfigurationId` passed to `dsc-configs/cluster-node/publish.ps1`)
 
 **init.ps1 phases:**
 - Phase 1 (CSE, SYSTEM): install RSAT-AD-Tools, set DNS on mgmt NIC (10.50.1.x), poll domain with explicit creds, domain join, write `C:\configure-node.ps1`, register `ConfigureClusterNode` scheduled task, reboot
 - Phase 2 (startup task, SYSTEM): idempotency guard, install Hyper-V + Failover Clustering features, retrieve DSC pull server cert thumbprint dynamically via WebRequest, apply LCM pull config, write `C:\configure-node-validation.log` (10 PASS/FAIL checks), unregister task
 
-**Validation logs to check after apply:**
+**Validation logs to check after apply (once CSE actually runs):**
 - `C:\init.log` — Phase 1 (CSE)
 - `C:\configure-node.log` — Phase 2 (scheduled task)
 - `C:\configure-node-validation.log` — all checks should show `[PASS]`
@@ -138,8 +146,8 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 ### VM SKUs
 
 - Hyper-V Cluster Nodes: **Standard_D8s_v5** (nested virtualization, 4 NIC max, 16 data disks)
-- Support VMs (DC, CA): **Standard_D4s_v4** — moved from v5 to free DSv5 quota for cluster nodes
-- DSC Pull Server: **Standard_D2s_v4** — moved from v5 for same reason
+- Support VMs (DC, CA): **Standard_D4s_v4**
+- DSC Pull Server: **Standard_D2s_v4**
 
 ### Cluster Storage
 
@@ -161,6 +169,7 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 - Terraform state backend uses `use_azuread_auth = true` (all waves)
 - Wave 4 storage data plane uses `storage_use_azuread = true` in provider
 - Wave 4 CSE blob download uses user-assigned managed identity (not storage key)
+- **New (pending implementation):** `scripts` container + `cluster-node-init.ps1` blob become Wave 0-owned artifacts, read by Wave 4 via `data` sources instead of managed as Wave 4 `resource`s (see Active Blocker above)
 
 ### DSC
 
@@ -186,17 +195,18 @@ Automation project to deploy a proof-of-concept Hyper-V failover cluster on Azur
 
 | Wave | Scope | Status | Notes |
 | ---- | ----- | ------ | ----- |
-| 0 | Bootstrap: Storage Account + Key Vault | **Complete** | `scripts` container created and permitted manually |
-| 1 | Networking: vNet, subnets, NSGs, NAT GW, Bastion toggle | **Complete** | DNS: 10.50.1.10 + 168.63.129.16 |
-| 2 | DSC Pull Server VM | **Complete** | D2s_v4. OData endpoint confirmed healthy |
-| 3 | DC + Enterprise Root CA (same RG) | **Complete** | D4s_v4. corp.lab healthy; CA domain-joined, AD CS running |
-| 4 | Hyper-V Cluster Nodes | **Blocked — quota** | Terraform plan clean. Waiting on Total Regional vCPU quota increase. |
+| 0 | Bootstrap: Storage Account + Key Vault | **Complete** | Never destroyed across sessions |
+| 1 | Networking: vNet, subnets, NSGs, NAT GW, Bastion toggle | **Complete** | Redeployed clean this session |
+| 2 | DSC Pull Server VM | **Complete** | Redeployed clean, OData endpoint healthy |
+| 3 | DC + Enterprise Root CA (same RG) | **Complete** | Redeployed clean, `corp.lab` healthy, CA domain-joined |
+| 4 | Hyper-V Cluster Nodes | **Blocked — storage container ownership bug** | VMs/disks up, CSE never ran. Fix planned, not yet applied. |
 
 ---
 
 ## Files to Reference in Future Sessions
 
 - `ai/plans/2026-04-24_infra-arch-design.md` — full architecture plan
+- `ai/plans/2026-07-10-wave4-bootstrap-ownership-fix.md` — Wave 4 blob/container fix + future CD pipeline design notes
 - `scripts/bootstrap.ps1` — Wave 0 bootstrap (creates storage account, both containers, Key Vault)
 - `environments/dev/wave1-net/` — Wave 1 Terraform root
 - `environments/dev/wave2-dsc/` — Wave 2 Terraform root

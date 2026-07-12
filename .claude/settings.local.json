@@ -4,7 +4,8 @@
       "mcp__claude_ai_Microsoft_Learn__microsoft_docs_search",
       "mcp__claude_ai_Microsoft_Learn__microsoft_docs_fetch",
       "Bash(terraform state *)",
-      "PowerShell([System.Guid]::NewGuid\\(\\).ToString\\(\\))"
+      "PowerShell([System.Guid]::NewGuid\\(\\).ToString\\(\\))",
+      "Bash(git -C /home/dschaefer/code/hyper-v-azure-lab status --porcelain environments/dev/wave1-net/terraform.tfvars)"
     ]
   }
 }
